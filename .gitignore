@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+runs/
+data/
+outputs/
+.env
+.env.*
+configs/*.local.json
+.pytest_cache/
