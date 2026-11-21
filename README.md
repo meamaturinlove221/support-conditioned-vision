@@ -1,5 +1,7 @@
 # Support-Conditioned Vision
 
+> **Repository status:** this GitHub landing commit currently contains project documentation and publishing instructions. The complete source archive is prepared separately; run `publish.ps1` from the extracted archive to push the source tree to `main`.
+
 Support-conditioned industrial image classification with a frozen DINOv2 encoder, class-balanced Support registration, a hard-margin linear QP readout, and product-aware task routing.
 
 > **Release status:** the generic A/B classification path is included. The cylinder quantity branch is research-only and is not approved for deployment. Its quantity readout checkpoint is not included in this release.
