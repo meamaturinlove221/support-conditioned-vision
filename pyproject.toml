@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sct-relational-trainer"
+version = "1.15.0"
+description = "DINOv2 support-conditioned classification and validation"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.4", "Pillow>=10", "numpy>=1.26", "scipy>=1.10"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src", "src.*"]

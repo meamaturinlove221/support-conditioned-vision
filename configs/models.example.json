@@ -1,0 +1,11 @@
+{
+  "default": {
+    "checkpoint": "__LOCAL_BACKBONE_CHECKPOINT__",
+    "official_source": "__LOCAL_DINOV2_SOURCE__"
+  },
+  "custom": {
+    "checkpoint": "__LOCAL_BACKBONE_CHECKPOINT__",
+    "official_source": "__LOCAL_DINOV2_SOURCE__",
+    "adapter_checkpoint": "__LOCAL_ADAPTER__"
+  }
+}

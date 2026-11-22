@@ -1,10 +1,42 @@
+# Python environments and caches
+.venv/
+venv/
 __pycache__/
 *.py[cod]
-.venv/
-runs/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+
+# Local data, runs, and machine-specific configuration
 data/
+runs/
+run/
 outputs/
+output/
+*.log
+*.tmp
 .env
 .env.*
 configs/*.local.json
-.pytest_cache/
+configs/*.local.yaml
+
+# Local model training outputs
+*.pth
+*.ckpt
+*.safetensors
+model/*
+!model/README.md
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local weights are excluded from this source-only release.
+*.pt
+*.pth
+*.safetensors
