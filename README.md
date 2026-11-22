@@ -1,3 +1,5 @@
+> **Source import status:** This repository currently contains the project landing page and technical documentation. The complete sanitized source tree has not yet been committed. Use the accompanying source ZIP and its `publish.ps1` script to import the full source tree into this repository.
+
 # Support-Conditioned Vision
 
 > **Repository status:** this GitHub landing commit currently contains project documentation and publishing instructions. The complete source archive is prepared separately; run `publish.ps1` from the extracted archive to push the source tree to `main`.
