@@ -23,6 +23,20 @@ This repository is the **generic inference and validation source edition**. It c
 
 It does not contain the desktop or web applications, the LoRA training workflow, customer datasets, or the cylinder quantity research branch.
 
+## Historical project results
+
+The following values are from the earlier DINOv2 Support-classification project record. They document historical performance under those original datasets and registration protocols; they are not reproduced by the source-only code snapshot in this repository.
+
+<p align="center"><img src="assets/historical-results.svg" alt="Historical DINOv2 Support-classification results: 98.12 percent Difficult overall, 97.60 percent nail plates, 96.81 percent unbalanced cylinder NG registration, and a separate 100 percent follow-up after supplemental review" width="100%"/></p>
+
+| Historical test | Result | Context |
+|---|---:|---|
+| Difficult, all products | **98.12%** (8,790 / 8,958) | First fixed-registration result |
+| Difficult nail plates | **97.60%** (1,870 / 1,916) | Historical fixed test |
+| Cylinder-axis unbalanced NG registration | **96.81%** | The NG Support set had an imbalanced abnormal-count composition; the source record does not state the denominator |
+| After supplemental image confirmation | **100%** (8,958 / 8,958) | Separate follow-up after additional confirmed images; not the original fixed-registration run |
+
+The fixed-registration figures and the supplemental follow-up are deliberately separated. The latter must not be compared as if it were the same unchanged test run. The datasets, checkpoints, and per-image receipts are not included in this public source edition.
 ## Method
 
 ### 1. Frozen visual encoder
@@ -44,28 +58,19 @@ The backbone is frozen. Feature extraction uses FP32, with TF32 disabled in the 
 
 ### 2. Class-balanced Support statistics
 
-Let the two Support classes contain (K_A) and (K_B) images. Each image receives a weight that makes the total contribution of each class equal:
+Let the two Support classes contain K_A and K_B images. Each A image receives weight `1 / (2 K_A)` and each B image receives weight `1 / (2 K_B)`. Therefore, each class contributes a total weight of 0.5, regardless of the number of registered images.
 
-[
-\sum_{i\in A}\alpha_i=\sum_{i\in B}\alpha_i=0.5.
-]
-
-CLS and Patch features are normalized separately using statistics computed from the registered Support set. Query features reuse these same statistics; they do not estimate a new center or scale.
+CLS and Patch features are normalized separately using the weighted Support center and scale. Query features reuse these same statistics; they do not estimate a new center or scale.
 
 ### 3. Hard-margin linear QP
 
-The normalized CLS and Patch features are combined into a single feature vector (z_i). With Support labels (y_i\in\{-1,+1\}), registration solves:
+The normalized CLS and Patch features are concatenated into `z_i`. Support labels `y_i` are encoded as -1 or +1. Registration solves the hard-margin objective below:
 
-[
-\min_{w,b}\;\frac{1}{2}\lVert w\rVert_2^2
-\qquad
-\text{s.t.}\quad y_i(w^\top z_i+b)\geq 1.
-]
+<p align="center"><img src="assets/qp-formulation.svg" alt="Class-balanced Support weights and hard-margin QP objective and margin constraint" width="100%"/></p>
 
-The intercept (b) is unregularized. The dual problem is solved with SciPy SLSQP and an active-set correction based on KKT conditions. The final Support margins are checked before the new registration is accepted.
+The intercept `b` is unregularized. The implementation solves the dual problem with SciPy SLSQP and an active-set correction based on KKT conditions. It checks the final margin of every Support image before accepting the new registration.
 
-The registered (w), (b), center, and scale are reused for the Query batch. QP solving and classification use FP64.
-
+The registered `w`, `b`, center, and scale are reused for the Query batch. QP solving and classification use FP64.
 ### 4. A/B swap verification
 
 The optional `--verify-swap` check reverses the two Support classes and verifies that the output columns reverse while the physical predictions remain consistent. This checks class ordering and output mapping; it is not an accuracy metric.
