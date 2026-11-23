@@ -62,7 +62,7 @@ The intercept `b` is unregularized. The implementation solves the dual problem w
 The registered `w`, `b`, center, and scale are reused for the Query batch. Optimization and classification use FP64.
 ### 4. A/B swap verification
 
-The optional `--verify-swap` check reverses the two Support classes and verifies that the output columns reverse while the physical predictions remain consistent. This checks class ordering and output mapping; it is not an accuracy metric.
+The optional `--verify-swap` check reverses the two Support classes and verifies that the output columns reverse while the physical predictions remain consistent. This verifies class ordering and output mapping.
 
 ## Quick start
 
@@ -202,7 +202,7 @@ The public source uses example product identifiers to demonstrate directory-base
 | `Difficult/sample_part_b` | Generic DINOv2 + hard-margin linear classifier |
 | Unknown or conflicting product folders | `REVIEW` |
 
-These identifiers are placeholders, not customer or production product names. Routing is based on the folder name or an explicit `--product` selection; it is not an image-content recognition model.
+These identifiers are sample folder names. Routing uses the folder name or an explicit `--product` selection.
 
 ## Repository layout
 
@@ -225,14 +225,13 @@ validate.py                  Labelled Query validation
 - This repository contains the generic A/B inference and validation source only.
 - Desktop UI, web UI, LoRA training workflow, customer-specific product routing, and cylinder quantity research are not included in this public source edition.
 - The public routing identifiers are generic examples.
-- No DINOv2 backbone checkpoint or LoRA adapter weights are included. Obtain the official backbone separately and provide any optional adapter from an authorized source.
-- Industrial images, Support/Query datasets, registration archives, and experiment outputs are not included.
-- No automated test suite is included in this repository snapshot.
-- The cylinder quantity readout is not part of this release.
+- Prepare the official DINOv2 backbone checkpoint locally; provide an optional LoRA adapter from an authorized source.
+- Industrial images, Support/Query datasets, registration archives, and experiment outputs remain external to the public source.
+- Cylinder quantity experiments are maintained separately from this generic classification release.
 
 ## Related project
 
-Synthetic A/B image groups and manifests for downstream experiments can be generated with [Industrial Image Synthesis](https://github.com/meamaturinlove221/industrial-image-synthesis). This repository uses Support images to register the classifier and evaluates it on Query images.
+Generate synthetic A/B image groups and manifests with [Industrial Image Synthesis](https://github.com/meamaturinlove221/industrial-image-synthesis). Organize the generated images into Support and Query sets, then use this repository to register the classifier and evaluate Query images.
 
 ## References
 
