@@ -22,9 +22,9 @@
 <rect x="250" y="193" width="145" height="76" rx="12" fill="#eaf6f0" stroke="#91bca7"/>
 <text x="322" y="222" text-anchor="middle" class="pill">B Support</text>
 <text x="322" y="250" text-anchor="middle" class="formula" style="font-size:24px">1 / (2 K_B)</text>
-<text x="245" y="312" text-anchor="middle" class="formula" style="font-size:25px">Σ A = 0.5 · Σ B = 0.5</text>
-<text x="245" y="348" text-anchor="middle" class="sub">Equal total contribution, regardless</text>
-<text x="245" y="372" text-anchor="middle" class="sub">of the number of Support images</text>
+<text x="245" y="306" text-anchor="middle" class="formula" style="font-size:22px">Σᵢ∈A αᵢ = 0.5</text>
+<text x="245" y="337" text-anchor="middle" class="formula" style="font-size:22px">Σᵢ∈B αᵢ = 0.5</text>
+<text x="245" y="372" text-anchor="middle" class="sub">Equal total contribution per class</text>
 <rect x="465" y="125" width="925" height="270" rx="20" fill="#ffffff" stroke="#8aa8c9" stroke-width="2"/>
 <text x="500" y="168" class="k">2 · Hard-margin linear QP</text>
 <text x="927" y="239" text-anchor="middle" class="formula" style="font-size:36px">minimize     ½ ‖w‖²₂</text>
