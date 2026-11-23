@@ -1,116 +1,251 @@
+<div align="center">
+
 # Support-Conditioned Vision
 
-Support-conditioned industrial image classification with a frozen DINOv2 encoder, class-balanced Support registration, a hard-margin linear QP readout, and product-aware task routing.
+**Support-conditioned industrial image classification with frozen DINOv2 features and a hard-margin linear QP readout.**
 
-> **Release status:** this source-only edition includes the generic A/B classification and validation paths. It does not include customer-specific workflows, model weights, data, training, or application interfaces.
+[![Python](https://img.shields.io/badge/Python-%E2%89%A53.10-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.4-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![DINOv2](https://img.shields.io/badge/Backbone-DINOv2--S%2F14-1877F2)](https://github.com/facebookresearch/dinov2)
+[![GitHub stars](https://img.shields.io/github/stars/meamaturinlove221/support-conditioned-vision?style=flat)](https://github.com/meamaturinlove221/support-conditioned-vision/stargazers)
 
-## What it does
+[Overview](#overview) · [Method](#method) · [Quick start](#quick-start) · [Input and output](#input-and-output) · [Scope](#release-scope)
 
-The application uses two labelled Support sets to define the current A/B task, then applies the registered classifier to Query images.
+<img src="assets/pipeline.svg" alt="Support-Conditioned Vision pipeline" width="100%"/>
 
-- **Registration and inference:** register A/B from a fixed Support manifest or reload a compatible registration profile, then export per-image Query predictions.
-- **Validation:** evaluate a fixed registration against labelled NG/OK or A/B inputs, exporting predictions and metrics.
+</div>
 
-## Generic classification pipeline
+## Overview
 
-```mermaid
-flowchart TD
-    A[Support A/B + Query] --> B[Frozen DINOv2 ViT-S/14 Register]
-    B --> C[CLS feature + ordered Patch features]
-    C --> D[Class-balanced normalization from Support]
-    D --> E[FP64 hard-margin linear QP]
-    E --> F[Reuse the registered linear readout for Query]
-    F --> G[A/B prediction and validation metrics]
+Support-Conditioned Vision performs **task-conditioned A/B classification**. A pair of labelled Support sets defines the classification task; the resulting classifier is then applied to a separate Query set.
+
+This repository is the **generic inference and validation source edition**. It contains the DINOv2 feature path, Support statistics, the FP64 QP solver, registration-profile handling, and the command-line inference and validation entry points.
+
+It does not contain the desktop or web applications, the LoRA training workflow, customer datasets, or the cylinder quantity research branch.
+
+## Method
+
+### 1. Frozen visual encoder
+
+The encoder is Meta's DINOv2 ViT-S/14 with registers.
+
+| Setting | Value |
+|---|---:|
+| Input | RGB, 448 × 448 |
+| Patch size | 14 × 14 |
+| Patch grid | 32 × 32 |
+| Hidden dimension | 384 |
+| Transformer blocks | 12 |
+| Register tokens | 4 |
+| Global feature | CLS, 384 dimensions |
+| Local features | 1,024 ordered Patch tokens, 384 dimensions each |
+
+The backbone is frozen. Feature extraction uses FP32, with TF32 disabled in the inference engine.
+
+### 2. Class-balanced Support statistics
+
+Let the two Support classes contain (K_A) and (K_B) images. Each image receives a weight that makes the total contribution of each class equal:
+
+[
+\sum_{i\in A}\alpha_i=\sum_{i\in B}\alpha_i=0.5.
+]
+
+CLS and Patch features are normalized separately using statistics computed from the registered Support set. Query features reuse these same statistics; they do not estimate a new center or scale.
+
+### 3. Hard-margin linear QP
+
+The normalized CLS and Patch features are combined into a single feature vector (z_i). With Support labels (y_i\in\{-1,+1\}), registration solves:
+
+[
+\min_{w,b}\;\frac{1}{2}\lVert w\rVert_2^2
+\qquad
+\text{s.t.}\quad y_i(w^\top z_i+b)\geq 1.
+]
+
+The intercept (b) is unregularized. The dual problem is solved with SciPy SLSQP and an active-set correction based on KKT conditions. The final Support margins are checked before the new registration is accepted.
+
+The registered (w), (b), center, and scale are reused for the Query batch. QP solving and classification use FP64.
+
+### 4. A/B swap verification
+
+The optional `--verify-swap` check reverses the two Support classes and verifies that the output columns reverse while the physical predictions remain consistent. This checks class ordering and output mapping; it is not an accuracy metric.
+
+## Quick start
+
+### Requirements
+
+- Python 3.10 or later
+- PyTorch 2.4 or later
+- Pillow, NumPy, SciPy
+- The official DINOv2 source and ViT-S/14 Register checkpoint
+
+Install PyTorch using the [official selector](https://pytorch.org/get-started/locally/) for your CUDA or CPU environment, then install the remaining dependencies:
+
+```bash
+git clone https://github.com/meamaturinlove221/support-conditioned-vision.git
+cd support-conditioned-vision
+
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux / macOS
+# source .venv/bin/activate
+
+python -m pip install -r requirements.txt
 ```
 
-- Input: RGB images resized to 448 × 448.
-- Encoder: DINOv2 ViT-S/14 Register, 384-dimensional hidden representation, 32 × 32 Patch grid.
-- Features: one CLS vector and 1,024 ordered Patch vectors.
-- Registration: A and B receive equal total weight when estimating normalization statistics.
-- Readout: hard-margin linear classification with an unregularized intercept, solved in FP64.
-- Inference: Query images reuse the Support-derived normalization and classifier; the QP is not re-fit for each Query.
+### Prepare DINOv2
 
-A compatible optional local LoRA adapter modifies Q/V projections in Transformer Blocks 10 and 11 (rank 4, alpha 4). The DINOv2 backbone remains frozen.
+Clone the official [DINOv2 repository](https://github.com/facebookresearch/dinov2) and obtain the ViT-S/14 Register checkpoint:
 
-## Product routing
+- Model: `dinov2_vits14_reg`
+- Checkpoint: [dinov2_vits14_reg4_pretrain.pth](https://dl.fbaipublicfiles.com/dinov2/dinov2_vits14/dinov2_vits14_reg4_pretrain.pth)
 
-The router selects a task from the `Difficult/<product>` path or an explicit product selection. It is directory-based routing, not an image-content recognition network.
+Copy the public configuration template:
 
-| Product folder | Route |
-|---|---|
-| `sample_generic` | Generic DINOv2 + QP |
-| `sample_part_a` | Generic DINOv2 + QP |
-| `sample_part_b` | Generic DINOv2 + QP |
-| Unknown or conflicting product folders | `REVIEW` |
-
-The folder labels above are examples, not real product identifiers.
-
-## Installation (Windows)
-
-Requirements: Python 3.10 or later and a compatible PyTorch runtime for your machine.
-
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```bash
+# Windows PowerShell
 Copy-Item configs/models.example.json configs/models.local.json
+
+# Linux / macOS
+# cp configs/models.example.json configs/models.local.json
 ```
 
-Obtain the [official DINOv2 source and ViT-S/14 Register checkpoint](https://github.com/facebookresearch/dinov2) separately and enter their local paths under `default` in `configs/models.local.json`. For GPU-specific PyTorch builds, follow the upstream PyTorch installation instructions. The bundled installer and launchers are not part of this edition. Runtime and prediction quality were not validated as part of release preparation.
+Set the local paths in `configs/models.local.json`:
 
-## CLI
+```json
+{
+  "default": {
+    "checkpoint": "C:/models/dinov2_vits14_reg4_pretrain.pth",
+    "official_source": "C:/repos/dinov2"
+  },
+  "custom": {
+    "checkpoint": "C:/models/dinov2_vits14_reg4_pretrain.pth",
+    "official_source": "C:/repos/dinov2",
+    "adapter_checkpoint": "C:/models/adapter.pt"
+  }
+}
+```
 
-Generic inference from a fixed Support manifest:
+The custom adapter is optional. No backbone or adapter weights are distributed in this repository.
+
+## Input and output
+
+### Support manifest
+
+A Support manifest is a JSON object with an `entries` array. Each entry contains an image path and its class role.
+
+```json
+{
+  "entries": [
+    {"path": "support/A/001.png", "role": "NG"},
+    {"path": "support/A/002.png", "role": "NG"},
+    {"path": "support/B/001.png", "role": "OK"},
+    {"path": "support/B/002.png", "role": "OK"}
+  ]
+}
+```
+
+Supported roles include `NG` / `OK` and `A` / `B`. Relative paths are resolved against the manifest directory.
+
+### Run inference
+
+The public routing table uses generic sample folder identifiers. Place the Query images under the matching `Difficult/<sample>` folder, or explicitly select a registered sample product.
 
 ```powershell
-.\.venv\Scripts\python.exe infer.py `
+python infer.py `
   --model-version default `
-  --support-manifest "C:/example/support.json" `
-  --query-dir "C:/example/Difficult/sample_generic/test" `
-  --output-dir runs/example_infer `
+  --support-manifest "C:/data/support.json" `
+  --query-dir "C:/data/Difficult/sample_generic/test" `
+  --output-dir runs/sample_inference `
   --device cuda `
   --verify-swap
 ```
 
-Validation with labelled NG/OK subfolders:
+### Run validation
+
+For validation, arrange labelled Query images in class subfolders:
+
+```text
+query/
+├── NG/
+│   ├── image_001.png
+│   └── image_002.png
+└── OK/
+    ├── image_003.png
+    └── image_004.png
+```
+
+Then run:
 
 ```powershell
-.\.venv\Scripts\python.exe validate.py `
+python validate.py `
   --model-version default `
-  --support-manifest "C:/example/support.json" `
-  --query-dir "C:/example/Difficult/sample_generic/test" `
-  --output-dir runs/example_validation `
+  --support-manifest "C:/data/support.json" `
+  --query-dir "C:/data/query" `
+  --output-dir runs/sample_validation `
   --verify-swap
 ```
 
-A Support manifest is a JSON object with an `entries` array. Each entry has a `path` and a `role` (default class labels: `NG` and `OK`). Relative Support paths resolve against the manifest directory. See `infer.py --help` and `validate.py --help` for options.
+### Outputs
 
-## Included model files
+Each run writes:
 
-No weights or checkpoints are included. See [`model/README.md`](model/README.md) for compatible local inputs. The official DINOv2 backbone is an external dependency and is not duplicated in this repository.
+| File | Contents |
+|---|---|
+| `predictions.csv` | Per-image A/B scores and predictions |
+| `summary.json` | Model identity, route, Support counts, and swap verification |
+| `metrics.json` | Validation confusion matrix, accuracy, per-class recall, and balanced accuracy (validation only) |
 
-## Research scope
+## Product routing
 
-This edition is limited to generic A/B classification and validation. Specialized rules and research training are outside the release.
+The public source uses example product identifiers to demonstrate directory-based routing:
+
+| Query path | Route |
+|---|---|
+| `Difficult/sample_generic` | Generic DINOv2 + QP |
+| `Difficult/sample_part_a` | Generic DINOv2 + QP |
+| `Difficult/sample_part_b` | Generic DINOv2 + QP |
+| Unknown or conflicting product folders | `REVIEW` |
+
+These identifiers are placeholders, not customer or production product names. Routing is based on the folder name or an explicit `--product` selection; it is not an image-content recognition model.
 
 ## Repository layout
 
 ```text
-configs/                 Public configuration template
-src/confirmed_support/   Support statistics and FP64 QP solver
-src/frozen_dino/         Frozen DINOv2 encoder and LoRA adapters
-src/inference/           Shared inference engine and registration sessions
-src/task_selection/      Example product-directory task routing
-model/                  Local model input instructions
+configs/
+  models.example.json       Public model-path template
+model/
+  README.md                 Local model input requirements
+src/
+  confirmed_support/        Support statistics and FP64 QP solver
+  frozen_dino/              Frozen DINOv2 encoder and adapter loader
+  inference/                Inference engine and registration profiles
+  task_selection/            Example directory-based routing
+infer.py                     Query inference
+validate.py                  Labelled Query validation
 ```
 
-## Data and privacy
+## Release scope and limitations
 
-Industrial images, Support/Query datasets, generated runs, local configuration files, and experiment outputs are not included. Copy the `.example.json` files to `.local.json` and fill in local paths. Local files are ignored by Git.
+- This repository contains the generic A/B inference and validation source only.
+- Desktop UI, web UI, LoRA training workflow, customer-specific product routing, and cylinder quantity research are not included in this public source edition.
+- The public routing identifiers are generic examples.
+- No DINOv2 backbone checkpoint or LoRA adapter weights are included. Obtain the official backbone separately and provide any optional adapter from an authorized source.
+- Industrial images, Support/Query datasets, registration archives, and experiment outputs are not included.
+- No automated test suite is included in this repository snapshot.
+- The cylinder quantity readout is not part of this release.
 
 ## Related project
 
-The paired synthetic-data generator is maintained separately in [Industrial Image Synthesis](https://github.com/meamaturinlove221/industrial-image-synthesis). The two projects exchange image groups and manifests; they do not call each other at runtime.
+The paired synthetic-data generator is maintained separately in [Industrial Image Synthesis](https://github.com/meamaturinlove221/industrial-image-synthesis). The generator exports image groups and manifests; this repository performs Support-conditioned inference and validation. They do not call each other at runtime.
+
+## References
+
+- Oquab et al., [DINOv2: Learning Robust Visual Features without Supervision](https://arxiv.org/abs/2304.07193).
+- Darcet et al., [Vision Transformers Need Registers](https://arxiv.org/abs/2309.16588).
+- [Official DINOv2 implementation and pretrained models](https://github.com/facebookresearch/dinov2).
 
 ## License
 
-No license is included in this initial publication. Public visibility alone does not grant permission to reuse, modify, or redistribute the code or model weights. Add a license only after confirming the project ownership and distribution terms.
+This repository currently has no `LICENSE` file. Public visibility does not by itself grant permission to use, modify, or redistribute the code. Add a license only after confirming ownership and distribution terms.
