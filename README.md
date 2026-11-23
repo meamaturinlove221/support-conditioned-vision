@@ -248,4 +248,6 @@ The paired synthetic-data generator is maintained separately in [Industrial Imag
 
 ## License
 
-This repository currently has no `LICENSE` file. Public visibility does not by itself grant permission to use, modify, or redistribute the code. Add a license only after confirming ownership and distribution terms.
+This repository currently has no `LICENSE` file. Public visibility does not by itself grant permission to use, modify, or redistribute this project's code.
+
+The upstream [DINOv2 repository](https://github.com/facebookresearch/dinov2) lists its code and pretrained model weights under Apache 2.0. That upstream license applies to the DINOv2 materials, not automatically to this repository. Review the upstream license and model terms when preparing a deployment or redistribution.
