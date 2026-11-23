@@ -19,10 +19,6 @@
 
 Support-Conditioned Vision performs **task-conditioned A/B classification**. A pair of labelled Support sets defines the classification task; the resulting classifier is then applied to a separate Query set.
 
-This repository is the **generic inference and validation source edition**. It contains the DINOv2 feature path, Support statistics, the FP64 hard-margin linear classifier, registration-profile handling, and the command-line inference and validation entry points.
-
-It does not contain the desktop or web applications, the LoRA training workflow, customer datasets, or the cylinder quantity research branch.
-
 ## Results
 
 We achieved 98.12% accuracy on a real industrial image test set.
