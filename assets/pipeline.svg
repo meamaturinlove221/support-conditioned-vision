@@ -56,5 +56,5 @@
  <rect x="22" y="128" width="211" height="42" rx="8" fill="#fff" stroke="#9bcbb9"/>
  <text x="127" y="155" text-anchor="middle" class="small">A / B Query scores</text>
 </g>
-<text x="720" y="390" text-anchor="middle" class="small">Support-derived normalization and QP parameters are fixed for the Query batch · no per-Query refit</text>
+<text x="720" y="390" text-anchor="middle" class="small">Support-derived normalization and classifier parameters remain fixed for the Query batch</text>
 </svg>
