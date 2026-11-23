@@ -26,7 +26,7 @@
 <text x="245" y="337" text-anchor="middle" class="formula" style="font-size:22px">Σᵢ∈B αᵢ = 0.5</text>
 <text x="245" y="372" text-anchor="middle" class="sub">Equal total contribution per class</text>
 <rect x="465" y="125" width="925" height="270" rx="20" fill="#ffffff" stroke="#8aa8c9" stroke-width="2"/>
-<text x="500" y="168" class="k">2 · Hard-margin linear linear classifier</text>
+<text x="500" y="168" class="k">2 · Hard-margin linear classifier</text>
 <text x="927" y="239" text-anchor="middle" class="formula" style="font-size:36px">minimize     ½ ‖w‖²₂</text>
 <line x1="560" y1="270" x2="1295" y2="270" stroke="#d5e0ec" stroke-width="2"/>
 <text x="927" y="322" text-anchor="middle" class="formula" style="font-size:32px">subject to     yᵢ (wᵀ zᵢ + b) ≥ 1</text>
