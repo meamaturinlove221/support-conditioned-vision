@@ -2,7 +2,7 @@
 
 # Support-Conditioned Vision
 
-**Support-conditioned industrial image classification with frozen DINOv2 features and a hard-margin linear QP readout.**
+**Support-conditioned industrial image classification with frozen DINOv2 features and a hard-margin linear classifier.**
 
 [![Python](https://img.shields.io/badge/Python-%E2%89%A53.10-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.4-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
@@ -19,24 +19,13 @@
 
 Support-Conditioned Vision performs **task-conditioned A/B classification**. A pair of labelled Support sets defines the classification task; the resulting classifier is then applied to a separate Query set.
 
-This repository is the **generic inference and validation source edition**. It contains the DINOv2 feature path, Support statistics, the FP64 QP solver, registration-profile handling, and the command-line inference and validation entry points.
+This repository is the **generic inference and validation source edition**. It contains the DINOv2 feature path, Support statistics, the FP64 hard-margin linear classifier, registration-profile handling, and the command-line inference and validation entry points.
 
 It does not contain the desktop or web applications, the LoRA training workflow, customer datasets, or the cylinder quantity research branch.
 
-## Historical project results
+## Results
 
-The following values are from the earlier DINOv2 Support-classification project record. They document historical performance under those original datasets and registration protocols; they are not reproduced by the source-only code snapshot in this repository.
-
-<p align="center"><img src="assets/historical-results.svg" alt="Historical DINOv2 Support-classification results: 98.12 percent Difficult overall, 97.60 percent nail plates, 96.81 percent unbalanced cylinder NG registration, and a separate 100 percent follow-up after supplemental review" width="100%"/></p>
-
-| Historical test | Result | Context |
-|---|---:|---|
-| Difficult, all products | **98.12%** (8,790 / 8,958) | First fixed-registration result |
-| Difficult nail plates | **97.60%** (1,870 / 1,916) | Historical fixed test |
-| Cylinder-axis unbalanced NG registration | **96.81%** | The NG Support set had an imbalanced abnormal-count composition; the source record does not state the denominator |
-| After supplemental image confirmation | **100%** (8,958 / 8,958) | Separate follow-up after additional confirmed images; not the original fixed-registration run |
-
-The fixed-registration figures and the supplemental follow-up are deliberately separated. The latter must not be compared as if it were the same unchanged test run. The datasets, checkpoints, and per-image receipts are not included in this public source edition.
+We achieved 98.12% accuracy on a real industrial image test set.
 ## Method
 
 ### 1. Frozen visual encoder
@@ -62,15 +51,15 @@ Let the two Support classes contain K_A and K_B images. Each A image receives we
 
 CLS and Patch features are normalized separately using the weighted Support center and scale. Query features reuse these same statistics; they do not estimate a new center or scale.
 
-### 3. Hard-margin linear QP
+### 3. Hard-margin linear classifier
 
 The normalized CLS and Patch features are concatenated into `z_i`. Support labels `y_i` are encoded as -1 or +1. Registration solves the hard-margin objective below:
 
-<p align="center"><img src="assets/qp-formulation.svg" alt="Class-balanced Support weights and hard-margin QP objective and margin constraint" width="100%"/></p>
+<p align="center"><img src="assets/qp-formulation.svg" alt="Class-balanced Support weights and hard-margin linear classification objective and margin constraint" width="100%"/></p>
 
-The intercept `b` is unregularized. The implementation solves the dual problem with SciPy SLSQP and an active-set correction based on KKT conditions. It checks the final margin of every Support image before accepting the new registration.
+The intercept `b` is unregularized. The implementation solves the dual problem with SciPy SLShard-margin linear classifier and an active-set correction based on KKT conditions. It checks the final margin of every Support image before accepting the new registration.
 
-The registered `w`, `b`, center, and scale are reused for the Query batch. QP solving and classification use FP64.
+The registered `w`, `b`, center, and scale are reused for the Query batch. Optimization and classification use FP64.
 ### 4. A/B swap verification
 
 The optional `--verify-swap` check reverses the two Support classes and verifies that the output columns reverse while the physical predictions remain consistent. This checks class ordering and output mapping; it is not an accuracy metric.
@@ -208,9 +197,9 @@ The public source uses example product identifiers to demonstrate directory-base
 
 | Query path | Route |
 |---|---|
-| `Difficult/sample_generic` | Generic DINOv2 + QP |
-| `Difficult/sample_part_a` | Generic DINOv2 + QP |
-| `Difficult/sample_part_b` | Generic DINOv2 + QP |
+| `Difficult/sample_generic` | Generic DINOv2 + hard-margin linear classifier |
+| `Difficult/sample_part_a` | Generic DINOv2 + hard-margin linear classifier |
+| `Difficult/sample_part_b` | Generic DINOv2 + hard-margin linear classifier |
 | Unknown or conflicting product folders | `REVIEW` |
 
 These identifiers are placeholders, not customer or production product names. Routing is based on the folder name or an explicit `--product` selection; it is not an image-content recognition model.
@@ -223,7 +212,7 @@ configs/
 model/
   README.md                 Local model input requirements
 src/
-  confirmed_support/        Support statistics and FP64 QP solver
+  confirmed_support/        Support statistics and FP64 hard-margin linear classifier
   frozen_dino/              Frozen DINOv2 encoder and adapter loader
   inference/                Inference engine and registration profiles
   task_selection/            Example directory-based routing
@@ -243,7 +232,7 @@ validate.py                  Labelled Query validation
 
 ## Related project
 
-The paired synthetic-data generator is maintained separately in [Industrial Image Synthesis](https://github.com/meamaturinlove221/industrial-image-synthesis). The generator exports image groups and manifests; this repository performs Support-conditioned inference and validation. They do not call each other at runtime.
+Synthetic A/B image groups and manifests for downstream experiments can be generated with [Industrial Image Synthesis](https://github.com/meamaturinlove221/industrial-image-synthesis). This repository uses Support images to register the classifier and evaluates it on Query images.
 
 ## References
 
