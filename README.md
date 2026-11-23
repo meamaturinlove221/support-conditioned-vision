@@ -9,7 +9,7 @@
 [![DINOv2](https://img.shields.io/badge/Backbone-DINOv2--S%2F14-1877F2)](https://github.com/facebookresearch/dinov2)
 [![GitHub stars](https://img.shields.io/github/stars/meamaturinlove221/support-conditioned-vision?style=flat)](https://github.com/meamaturinlove221/support-conditioned-vision/stargazers)
 
-[Overview](#overview) · [Method](#method) · [Quick start](#quick-start) · [Input and output](#input-and-output) · [Scope](#release-scope)
+[Overview](#overview) · [Architecture](#architecture) · [Quick start](#quick-start) · [Input and output](#input-and-output) · [Scope](#release-scope)
 
 <img src="assets/pipeline.svg" alt="Support-Conditioned Vision pipeline" width="100%"/>
 
@@ -22,6 +22,7 @@ Support-Conditioned Vision performs **task-conditioned A/B classification**. A p
 ## Results
 
 We achieved 98.12% accuracy on a real industrial image test set.
+
 ## Architecture
 
 The same frozen visual encoder is shared by Support and Query images. The Support labels define a task-specific decision boundary; a different Support set produces a different classifier without changing the DINOv2 weights.
