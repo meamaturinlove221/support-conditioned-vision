@@ -22,43 +22,49 @@ Support-Conditioned Vision performs **task-conditioned A/B classification**. A p
 ## Results
 
 We achieved 98.12% accuracy on a real industrial image test set.
-## Method
+## Architecture
 
-### 1. Frozen visual encoder
+The same frozen visual encoder is shared by Support and Query images. The Support labels define a task-specific decision boundary; a different Support set produces a different classifier without changing the DINOv2 weights.
 
-The encoder is Meta's DINOv2 ViT-S/14 with registers.
+<img src="assets/pipeline.svg" alt="Support-conditioned classification architecture" width="100%"/>
 
-| Setting | Value |
-|---|---:|
-| Input | RGB, 448 × 448 |
-| Patch size | 14 × 14 |
-| Patch grid | 32 × 32 |
-| Hidden dimension | 384 |
-| Transformer blocks | 12 |
-| Register tokens | 4 |
-| Global feature | CLS, 384 dimensions |
-| Local features | 1,024 ordered Patch tokens, 384 dimensions each |
+### 1. Image encoding
 
-The backbone is frozen. Feature extraction uses FP32, with TF32 disabled in the inference engine.
+Each image is decoded as RGB, resized directly to 448 × 448 with bilinear interpolation, and normalized with ImageNet channel statistics. The full image is encoded; this path does not apply a detector, segmentation mask, or center crop.
 
-### 2. Class-balanced Support statistics
+The encoder is Meta's **DINOv2 ViT-S/14 with Registers**. Its 12 Transformer blocks, 384-dimensional hidden representation, and six attention heads produce two feature blocks:
 
-Let the two Support classes contain K_A and K_B images. Each A image receives weight `1 / (2 K_A)` and each B image receives weight `1 / (2 K_B)`. Therefore, each class contributes a total weight of 0.5, regardless of the number of registered images.
+| Feature | Shape | Role |
+|---|---:|---|
+| CLS | `384` | Global representation of the full image |
+| Patch | `1,024 × 384` | Spatially ordered local representations from the 32 × 32 patch grid |
 
-CLS and Patch features are normalized separately using the weighted Support center and scale. Query features reuse these same statistics; they do not estimate a new center or scale.
+The four Register tokens are part of the Transformer input but are not included in the returned CLS/Patch feature blocks. The backbone remains frozen; inference feature extraction uses FP32.
 
-### 3. Hard-margin linear classifier
+### 2. Support registration
 
-The normalized CLS and Patch features are concatenated into `z_i`. Support labels `y_i` are encoded as -1 or +1. Registration solves the hard-margin objective below:
+Let the Support set contain `K_A` images in class A and `K_B` images in class B. Each image is assigned a class-balanced weight:
 
-<p align="center"><img src="assets/hard-margin-classifier.svg" alt="Class-balanced Support weights and hard-margin linear classification objective and margin constraint" width="100%"/></p>
+- A image: `1 / (2 K_A)`
+- B image: `1 / (2 K_B)`
 
-The intercept `b` is unregularized. The implementation solves the dual problem with SciPy SLShard-margin linear classifier and an active-set correction based on KKT conditions. It checks the final margin of every Support image before accepting the new registration.
+Each class therefore contributes a total weight of 0.5. This prevents the larger Support class from dominating the feature statistics.
 
-The registered `w`, `b`, center, and scale are reused for the Query batch. Optimization and classification use FP64.
-### 4. A/B swap verification
+CLS and Patch are processed separately. For each block, registration computes a weighted common center and one scale for the whole block, then normalizes every Support feature with those values. The normalized blocks are concatenated into one feature vector per image.
 
-The optional `--verify-swap` check reverses the two Support classes and verifies that the output columns reverse while the physical predictions remain consistent. This verifies class ordering and output mapping.
+Registration then fits a **hard-margin linear classifier** from the Support labels. Its objective minimizes the squared length of the classification vector while requiring every labelled Support image to have a signed margin of at least one. The intercept is free and is not included in the norm penalty.
+
+<p align="center"><img src="assets/hard-margin-classifier.svg" alt="Class-balanced Support statistics and hard-margin linear classification objective" width="100%"/></p>
+
+The implementation solves the dual problem with SciPy SLSQP, applies an active-set correction from the KKT conditions, and evaluates the returned classifier against every Support image. A registration is accepted only when the solver succeeds and the Support constraints pass the numerical checks. Optimization and classification use FP64.
+
+### 3. Query classification
+
+After registration, the classifier stores the two feature-block centers and scales, the linear coefficient, and the intercept. Query images pass through the same frozen encoder and the same normalization values. The classifier returns A/B scores from the signed linear margin; no statistics or classifier parameters are refitted on Query images.
+
+### 4. Registration consistency
+
+The optional `--verify-swap` check registers the same images with A and B exchanged. It checks that the score columns exchange while the physical class prediction remains consistent.
 
 ## Quick start
 
