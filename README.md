@@ -55,7 +55,7 @@ CLS and Patch features are normalized separately using the weighted Support cent
 
 The normalized CLS and Patch features are concatenated into `z_i`. Support labels `y_i` are encoded as -1 or +1. Registration solves the hard-margin objective below:
 
-<p align="center"><img src="assets/qp-formulation.svg" alt="Class-balanced Support weights and hard-margin linear classification objective and margin constraint" width="100%"/></p>
+<p align="center"><img src="assets/hard-margin-classifier.svg" alt="Class-balanced Support weights and hard-margin linear classification objective and margin constraint" width="100%"/></p>
 
 The intercept `b` is unregularized. The implementation solves the dual problem with SciPy SLShard-margin linear classifier and an active-set correction based on KKT conditions. It checks the final margin of every Support image before accepting the new registration.
 
