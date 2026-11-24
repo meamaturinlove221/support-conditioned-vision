@@ -17,7 +17,7 @@
 
 ## Overview
 
-Support-Conditioned Vision performs **task-conditioned A/B classification**. A pair of labelled Support sets defines the classification task; the resulting classifier is then applied to a separate Query set.
+Support-Conditioned Vision performs **task-conditioned A/B classification**. A pair of labelled Support sets defines the classification task; the resulting classifier is then applied to a separate Query set.Learn more at https://www.yuque.com/maturinlove221/nq2gn9/pxhlnttxotq1ydqs?singleDoc# 
 
 ## Results
 
